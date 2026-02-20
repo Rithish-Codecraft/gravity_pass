@@ -1,27 +1,32 @@
 const router = require('express').Router()
-const db = require('../db')
+const { query } = require('../db')
 const auth = require('../middleware/auth')
 
 // GET /api/announcements
-router.get('/', auth, (req, res) => {
-    const anns = db.prepare(`
-    SELECT a.*, u.name as author_name
-    FROM announcements a JOIN users u ON a.created_by = u.id
-    ORDER BY a.created_at DESC
-  `).all()
-    res.json(anns)
+router.get('/', auth, async (req, res) => {
+    try {
+        const anns = await query(`
+            SELECT a.*, u.name as author_name
+            FROM announcements a JOIN users u ON a.created_by = u.id
+            ORDER BY a.created_at DESC
+        `)
+        res.json(anns)
+    } catch (e) { res.status(500).json({ error: e.message }) }
 })
 
-// POST /api/announcements  (staff/admin)
-router.post('/', auth, (req, res) => {
+// POST /api/announcements
+router.post('/', auth, async (req, res) => {
     if (req.user.role === 'student') return res.status(403).json({ error: 'Forbidden' })
-    const { title, body, target, urgent } = req.body
-    if (!title || !body) return res.status(400).json({ error: 'title and body required' })
+    try {
+        const { title, body, target, urgent } = req.body
+        if (!title || !body) return res.status(400).json({ error: 'title and body required' })
 
-    const info = db.prepare('INSERT INTO announcements (title, body, target, urgent, created_by) VALUES (?,?,?,?,?)').run(
-        title, body, target || 'All Students', urgent ? 1 : 0, req.user.id
-    )
-    res.json({ id: info.lastInsertRowid, title, body, target, urgent, message: 'Announcement published!' })
+        const [row] = await query(
+            'INSERT INTO announcements (title, body, target, urgent, created_by) VALUES ($1,$2,$3,$4,$5) RETURNING id',
+            [title, body, target || 'All Students', urgent ? 1 : 0, req.user.id]
+        )
+        res.json({ id: row.id, title, body, target, urgent, message: 'Announcement published!' })
+    } catch (e) { res.status(500).json({ error: e.message }) }
 })
 
 module.exports = router

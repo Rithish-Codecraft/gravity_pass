@@ -5,7 +5,7 @@ server/node_modules/
 # Build output
 dist/
 
-# Database (local only — hosted DB lives in Docker volume or Render disk)
+# Database (local only — hosted DB lives on Render Disk)
 server/edusphere.db
 server/uploads/
 
@@ -15,12 +15,24 @@ students_raw.json
 # Logs
 *.log
 npm-debug.log*
+build_log*.txt
 
 # Environment
 .env
 .env.*
 !.env.example
 
+# Python virtual environment
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
 # OS
 .DS_Store
 Thumbs.db
+
+# Junk files
+*.pdf

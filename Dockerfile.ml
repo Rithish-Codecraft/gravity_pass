@@ -2,10 +2,10 @@
 # NOTE: face_recognition requires dlib which takes ~10 min to compile.
 # Using a pre-built image with dlib included.
 
-FROM python:3.11-slim
+FROM python:3.11-slim-bookworm
 
 # Install system dependencies for OpenCV + dlib + face_recognition
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     libopenblas-dev \
@@ -29,13 +29,18 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY ml-service/ ./
 
 # Create data directories
-RUN mkdir -p face_data trained_models data
+RUN mkdir -p face_data trained_models data \
+    && groupadd --gid 1001 appuser \
+    && useradd --uid 1001 --gid appuser --no-create-home appuser \
+    && chown -R appuser:appuser /app
 
 # Environment
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV DB_PATH=/app/shared_db/edusphere.db
 ENV ML_PORT=5000
+
+USER appuser
 
 EXPOSE 5000
 

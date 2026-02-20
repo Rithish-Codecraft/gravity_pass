@@ -1,29 +1,28 @@
 const router = require('express').Router()
-const db = require('../db')
+const { query } = require('../db')
 const auth = require('../middleware/auth')
 
-// GET /api/results  — student's own results
-router.get('/', auth, (req, res) => {
+// GET /api/results
+router.get('/', auth, async (req, res) => {
     if (req.user.role !== 'student') return res.status(403).json({ error: 'Forbidden' })
-    const student = db.prepare('SELECT * FROM students WHERE user_id = ?').get(req.user.id)
-    if (!student) return res.status(404).json({ error: 'Student not found' })
+    try {
+        const [student] = await query('SELECT * FROM students WHERE user_id = $1', [req.user.id])
+        if (!student) return res.status(404).json({ error: 'Student not found' })
 
-    const { semester } = req.query
+        const { semester } = req.query
+        const results = semester
+            ? await query('SELECT * FROM results WHERE student_id = $1 AND semester = $2 ORDER BY id', [student.id, parseInt(semester)])
+            : await query('SELECT * FROM results WHERE student_id = $1 ORDER BY semester DESC, id', [student.id])
 
-    const query = semester
-        ? 'SELECT * FROM results WHERE student_id = ? AND semester = ? ORDER BY id'
-        : 'SELECT * FROM results WHERE student_id = ? ORDER BY semester DESC, id'
+        const sgpaRows = await query(
+            'SELECT semester, AVG(gpa) as sgpa FROM results WHERE student_id = $1 GROUP BY semester ORDER BY semester',
+            [student.id]
+        )
+        const sgpaMap = {}
+        sgpaRows.forEach(r => { sgpaMap[r.semester] = parseFloat(parseFloat(r.sgpa).toFixed(2)) })
 
-    const results = semester
-        ? db.prepare(query).all(student.id, parseInt(semester))
-        : db.prepare(query).all(student.id)
-
-    // Compute per-semester SGPA
-    const sgpaMap = {}
-    db.prepare('SELECT semester, AVG(gpa) as sgpa FROM results WHERE student_id = ? GROUP BY semester ORDER BY semester').all(student.id)
-        .forEach(r => { sgpaMap[r.semester] = parseFloat(r.sgpa.toFixed(2)) })
-
-    res.json({ results, sgpaMap, student })
+        res.json({ results, sgpaMap, student })
+    } catch (e) { res.status(500).json({ error: e.message }) }
 })
 
 module.exports = router

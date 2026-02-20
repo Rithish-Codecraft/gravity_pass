@@ -1,5 +1,5 @@
 const router = require('express').Router()
-const db = require('../db')
+const { query } = require('../db')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const { OAuth2Client } = require('google-auth-library')
@@ -9,17 +9,22 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID_
 const client = new OAuth2Client(GOOGLE_CLIENT_ID)
 
 // POST /api/auth/login
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
     const { email, password } = req.body
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' })
 
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email)
-    if (!user) return res.status(401).json({ error: 'Invalid credentials' })
+    try {
+        const [user] = await query('SELECT * FROM users WHERE email = $1', [email])
+        if (!user) return res.status(401).json({ error: 'Invalid credentials' })
 
-    const valid = bcrypt.compareSync(password, user.password_hash)
-    if (!valid) return res.status(401).json({ error: 'Invalid credentials' })
+        const valid = bcrypt.compareSync(password, user.password_hash)
+        if (!valid) return res.status(401).json({ error: 'Invalid credentials' })
 
-    sendToken(user, res)
+        await sendToken(user, res)
+    } catch (e) {
+        console.error(e)
+        res.status(500).json({ error: 'Login failed' })
+    }
 })
 
 // POST /api/auth/google
@@ -28,53 +33,32 @@ router.post('/google', async (req, res) => {
     if (!token) return res.status(400).json({ error: 'Token required' })
 
     try {
-        // Verify Google Token
-        // NOTE: For dev without real credentials, we might skip strict verification if configured
-        // But for production, this is required.
-        // If GOOGLE_CLIENT_ID is dummy, verifyIdToken will fail. 
-        // For this demo/project, if logic fails, we fallback to decoding payload assuming it's a valid JWT from frontend if in dev mode?
-        // No, better to try real verification, catch error, and if dev mode, allow simulated login for known emails?
-
         let email = null
-
         try {
-            const ticket = await client.verifyIdToken({
-                idToken: token,
-                audience: GOOGLE_CLIENT_ID,
-            })
+            const ticket = await client.verifyIdToken({ idToken: token, audience: GOOGLE_CLIENT_ID })
             email = ticket.getPayload().email
         } catch (e) {
-            console.log('Google verify failed (expected if no real Client ID):', e.message)
-            // Fallback for demo: if we sent a raw email or dummy token, just use it?
-            // The frontend @react-oauth/google returns an id_token.
-            // If we can't verify it (because server doesn't have the secret), we can't trust it.
-            // However, for this specific USER REQUEST "make them able to...", I should implement the code.
-            // If they don't provide a Client ID, it won't work securely.
-            // I'll add a dev bypass if the token acts as a "simulated" token (e.g. just an email string)
-            // matching a user in DB, but strictly speaking that's insecure.
-            // I'll assume they will put a real Client ID in .env
+            console.log('Google verify failed:', e.message)
             return res.status(401).json({ error: 'Invalid Google Token' })
         }
 
-        const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email)
+        const [user] = await query('SELECT * FROM users WHERE email = $1', [email])
         if (!user) return res.status(401).json({ error: 'User not found. Please register first.' })
 
-        sendToken(user, res)
-
+        await sendToken(user, res)
     } catch (e) {
         console.error(e)
         res.status(500).json({ error: 'Google login failed' })
     }
 })
 
-function sendToken(user, res) {
-    // Get role-specific id
+async function sendToken(user, res) {
     let profileId = null
     if (user.role === 'student') {
-        const s = db.prepare('SELECT id FROM students WHERE user_id = ?').get(user.id)
+        const [s] = await query('SELECT id FROM students WHERE user_id = $1', [user.id])
         profileId = s?.id
     } else if (user.role === 'staff') {
-        const s = db.prepare('SELECT id FROM staff WHERE user_id = ?').get(user.id)
+        const [s] = await query('SELECT id FROM staff WHERE user_id = $1', [user.id])
         profileId = s?.id
     }
 

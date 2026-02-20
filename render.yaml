@@ -38,12 +38,22 @@ services:
         value: production
       - key: PORT
         value: "4000"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: edusphere-postgres
+          property: connectionString
       - key: JWT_SECRET
         sync: false
       - key: FRONTEND_URL
         sync: false
       - key: ML_SERVICE_URL
         sync: false
+
+databases:
+  - name: edusphere-postgres
+    databaseName: edusphere
+    user: edusphere
+    plan: free
 
   # ── 3. ML Service — Web Service (Python / Flask) ──────────────────────────
   - type: web
