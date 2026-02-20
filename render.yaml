@@ -13,7 +13,6 @@ services:
   - type: web
     name: edusphere-frontend
     env: static
-    plan: free
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     headers:
@@ -32,7 +31,6 @@ services:
   - type: web
     name: edusphere-api
     env: node
-    plan: free
     buildCommand: npm install
     startCommand: node server/index.js
     envVars:
@@ -51,7 +49,6 @@ services:
   - type: web
     name: edusphere-ml
     env: python
-    plan: free
     buildCommand: cd ml-service && pip install -r requirements.txt && python -m spacy download en_core_web_sm
     startCommand: cd ml-service && gunicorn "app:create_app()" --bind 0.0.0.0:$PORT
     envVars:
