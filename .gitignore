@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+server/node_modules/
+
+# Build output
+dist/
+
+# Database (local only — hosted DB lives in Docker volume or Render disk)
+server/edusphere.db
+server/uploads/
+
+# Extracted PDF data (only needed for initial import)
+students_raw.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db

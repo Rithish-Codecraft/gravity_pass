@@ -1,0 +1,11 @@
+node_modules
+server/node_modules
+server/edusphere.db
+students_raw.json
+.git
+.gitignore
+dist
+**/*.log
+server/uploads
+*.md
+.env*

@@ -1,0 +1,60 @@
+version: '3.9'
+
+services:
+  # ── Express + React frontend ──────────────────────────────────────────────
+  edusphere:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: edusphere-app
+    ports:
+      - "4000:4000"
+    volumes:
+      - edusphere_data:/app/data
+      - edusphere_uploads:/app/server/uploads
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      JWT_SECRET: edusphere_super_secret_change_in_prod_2026
+      DB_PATH: /app/data/edusphere.db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Flask ML Service ──────────────────────────────────────────────────────
+  ml-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.ml
+    container_name: edusphere-ml
+    ports:
+      - "5000:5000"
+    volumes:
+      # SHARED: same DB file as Express
+      - edusphere_data:/app/shared_db
+      # Face data persisted
+      - ml_face_data:/app/face_data
+      # Trained models persisted
+      - ml_models:/app/trained_models
+    environment:
+      DB_PATH: /app/shared_db/edusphere.db
+      ML_PORT: 5000
+      DEBUG: "False"
+    restart: unless-stopped
+    depends_on:
+      edusphere:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/ml/health')"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+
+volumes:
+  edusphere_data:      # Shared SQLite DB
+  edusphere_uploads:   # Express uploaded notes
+  ml_face_data:        # Face embeddings + images
+  ml_models:           # Trained sklearn models
