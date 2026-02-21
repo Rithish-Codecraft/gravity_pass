@@ -104,16 +104,16 @@ export default function Landing() {
             <div style={{ position: 'relative', zIndex: 1, maxWidth: 420, margin: '0 auto', padding: '40px 20px 40px' }}>
                 {/* Logo */}
                 <div className="animate-fadeInUp" style={{ textAlign: 'center', marginBottom: 36 }}>
-                    <div style={{
-                        width: 72, height: 72, borderRadius: 22, margin: '0 auto 16px',
-                        background: 'linear-gradient(135deg, #6c63ff, #00d4aa)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '2rem', boxShadow: '0 8px 32px rgba(108,99,255,0.4)',
-                        animation: 'float 3s ease-in-out infinite',
-                    }}>🎓</div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.02em', background: 'linear-gradient(135deg, #fff 30%, #9090c0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        EduSphere
-                    </div>
+                    <img
+                        src="/logo.png"
+                        alt="Gravity Pass Logo"
+                        style={{
+                            height: 80,
+                            margin: '0 auto 16px',
+                            display: 'block',
+                            animation: 'float 3s ease-in-out infinite',
+                        }}
+                    />
                     <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: 4 }}>College ERP · Sign in to continue</div>
                 </div>
 
